@@ -3,7 +3,7 @@ from utils import *
 from PIL import Image, ImageDraw, ImageFont, ImageChops
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-srresnet_checkpoint = "SrresnetCheckpoint/checkpoint_epoch_42_srresnet.pth.tar"
+srresnet_checkpoint = "SrresnetCheckpoint(cropsize96batch16prelu)/checkpoint_epoch_42_srresnet.pth.tar"
 srresnet = torch.load(srresnet_checkpoint)['model'].to(device)
 srresnet.eval()
 

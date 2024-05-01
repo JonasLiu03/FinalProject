@@ -2,7 +2,7 @@ import os
 import re
 from utils import *
 from skimage.metrics import peak_signal_noise_ratio, structural_similarity, mean_squared_error
-from datasets import SRDataset
+from datasets import EnhancedDataset
 import torch
 
 
@@ -37,13 +37,13 @@ for idx, checkpoint_file in enumerate(valid_checkpoints, start=1):
     # Evaluate on each data set
     for test_data_name in test_data_names:
         # Custom dataloader
-        test_dataset = SRDataset(data_folder,
-                                 split='test',
-                                 crop_size=0,
-                                 scaling_factor=4,
-                                 lr_img_type='imagenet-norm',
-                                 hr_img_type='[-1, 1]',
-                                 test_data_name=test_data_name)
+        test_dataset = EnhancedDataset(data_folder,
+                                       split='test',
+                                       crop_size=0,
+                                       scaling_factor=4,
+                                       lr_img_type='imagenet-norm',
+                                       hr_img_type='[-1, 1]',
+                                       test_data_name=test_data_name)
         test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=1, shuffle=False, num_workers=0,
                                                   pin_memory=True)
 

@@ -16,7 +16,7 @@ title_label = tk.Label(root, text="Image Super Resolution", font=("Arial", 24))
 title_label.grid(row=0, column=0, sticky='ew')
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-srresnet_checkpoint = "SrresnetCheckpoint/checkpoint_epoch_43_srresnet.pth.tar"
+srresnet_checkpoint = "SrresnetCheckpoint(cropsize96batch16prelu)/checkpoint_epoch_43_srresnet.pth.tar"
 srresnet = torch.load(srresnet_checkpoint)['model'].to(device)
 srresnet.eval()
 

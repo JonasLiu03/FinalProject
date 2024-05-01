@@ -3,14 +3,14 @@ import os
 import torch
 from torch import nn
 from models import SRResNet
-from datasets import SRDataset
+from datasets import EnhancedDataset
 from utils import AverageMeter, clip_gradient
 from torch.optim import Adam
 from torch.utils.data import DataLoader
 
 # Constants
 DATA_FOLDER = './'
-CHECKPOINT_PATH = 'SrresnetCheckpoint(cropsize64batch8)/checkpoint_epoch_19_srresnet.pth.tar'
+CHECKPOINT_PATH = 'SrresnetCheckpoint(cropsize64batch8prelu)/checkpoint_epoch_19_srresnet.pth.tar'
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 CUDNN_BENCHMARK = True
 CUDA_LAUNCH_BLOCKING = 1
@@ -67,13 +67,13 @@ def main():
     model, optimizer, start_epoch = load_model(CHECKPOINT_PATH)
     model.to(DEVICE)
     criterion = nn.MSELoss().to(DEVICE)
-    train_dataset = SRDataset(DATA_FOLDER, split='train', crop_size=64, scaling_factor=4, lr_img_type='imagenet-norm', hr_img_type='[-1, 1]')
+    train_dataset = EnhancedDataset(DATA_FOLDER, split='train', crop_size=64, scaling_factor=4, lr_img_type='imagenet-norm', hr_img_type='[-1, 1]')
     train_loader = DataLoader(train_dataset, batch_size=8, shuffle=True, num_workers=4, pin_memory=True)
     epochs = 50
 
     for epoch in range(start_epoch, epochs):
         train_epoch(train_loader, model, criterion, optimizer, epoch)
-        save_checkpoint(model, optimizer, epoch, 'SrresnetCheckpoint(cropsize64batch8)')
+        save_checkpoint(model, optimizer, epoch, 'SrresnetCheckpoint(cropsize64batch8prelu)')
 
 if __name__ == '__main__':
     main()

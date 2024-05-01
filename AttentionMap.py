@@ -5,7 +5,7 @@ import numpy as np
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-srresnet_checkpoint = "D:/A_Refp/SrresnetCheckpoint/checkpoint_epoch_43_srresnet.pth.tar"
+srresnet_checkpoint = "D:/A_Refp/SrresnetCheckpoint(cropsize96batch16prelu)/checkpoint_epoch_43_srresnet.pth.tar"
 checkpoint = torch.load(srresnet_checkpoint, map_location=device)
 srresnet = checkpoint['model'].to(device)
 srresnet.eval()

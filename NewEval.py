@@ -1,6 +1,6 @@
 from utils import *
 from skimage.metrics import peak_signal_noise_ratio, structural_similarity
-from datasets import SRDataset
+from datasets import EnhancedDataset
 import numpy as np
 import torch
 import torch.nn.functional as F
@@ -11,14 +11,14 @@ def compute_mse(hr, sr):
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 data_folder = "./"
 test_data_names = ["Set5", "Set14", "BSDS100"]
-srresnet_checkpoint = "SrresnetCheckpoint/checkpoint_epoch_43_srresnet.pth.tar"
+srresnet_checkpoint = "SrresnetCheckpoint(cropsize96batch16prelu)/checkpoint_epoch_43_srresnet.pth.tar"
 srresnet = torch.load(srresnet_checkpoint)['model'].to(device)
 srresnet.eval()
 model = srresnet
 for test_data_name in test_data_names:
     print("\nFor %s:\n" % test_data_name)
-    test_dataset = SRDataset(data_folder, split='test', crop_size=0, scaling_factor=4, lr_img_type='imagenet-norm',
-                             hr_img_type='[-1, 1]', test_data_name=test_data_name)
+    test_dataset = EnhancedDataset(data_folder, split='test', crop_size=0, scaling_factor=4, lr_img_type='imagenet-norm',
+                                   hr_img_type='[-1, 1]', test_data_name=test_data_name)
     test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=1, shuffle=False, num_workers=0, pin_memory=True)
     PSNRs_srresnet = AverageMeter()
     SSIMs_srresnet = AverageMeter()

@@ -6,39 +6,36 @@ import torch
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-# Some constants
+# Constants
 RGB_WEIGHTS = torch.FloatTensor([65.481, 128.553, 24.966]).to(device)
-IMAGENET_MEAN = torch.FloatTensor([0.485, 0.456, 0.406]).unsqueeze(1).unsqueeze(2)
-IMAGENET_STD = torch.FloatTensor([0.229, 0.224, 0.225]).unsqueeze(1).unsqueeze(2)
-imagenet_mean_cuda = torch.FloatTensor([0.485, 0.456, 0.406]).to(device).unsqueeze(0).unsqueeze(2).unsqueeze(3)
-imagenet_std_cuda = torch.FloatTensor([0.229, 0.224, 0.225]).to(device).unsqueeze(0).unsqueeze(2).unsqueeze(3)
-
+IMAGENET_STATS = {
+    'mean': torch.FloatTensor([0.485, 0.456, 0.406]).to(device).unsqueeze(0).unsqueeze(2).unsqueeze(3),
+    'std': torch.FloatTensor([0.229, 0.224, 0.225]).to(device).unsqueeze(0).unsqueeze(2).unsqueeze(3)
+}
 
 def convert_image(img, source, target):
     assert source in {'pil', '[0, 1]', '[-1, 1]'}
     assert target in {'pil', '[0, 255]', '[0, 1]', '[-1, 1]', 'imagenet-norm', 'y-channel'}
 
-    conversion_map = {
+    conversions = {
         'pil': lambda x: FT.to_tensor(x),
         '[0, 1]': lambda x: x,
         '[-1, 1]': lambda x: (x + 1) / 2
     }
 
-    img = conversion_map[source](img)
-
-    transformation_map = {
+    transformations = {
         'pil': lambda x: FT.to_pil_image(x.clamp(0, 1)),
         '[0, 255]': lambda x: 255 * x,
         '[0, 1]': lambda x: x,
         '[-1, 1]': lambda x: 2 * x - 1,
-        'imagenet-norm': lambda x: (x - IMAGENET_MEAN) / IMAGENET_STD,
+        'imagenet-norm': lambda x: (x - IMAGENET_STATS['mean']) / IMAGENET_STATS['std'],
         'y-channel': lambda x: torch.matmul(255 * x.permute(0, 2, 3, 1)[:, 4:-4, 4:-4, :], RGB_WEIGHTS) / 255 + 16
     }
 
-    return transformation_map[target](img)
+    img = conversions[source](img)
+    return transformations[target](img)
 
-
-class ImageTransforms(object):
+class ImageTransforms:
     def __init__(self, split, crop_size, scaling_factor, lr_img_type, hr_img_type):
         self.split = split.lower()
         self.crop_size = crop_size
@@ -46,33 +43,31 @@ class ImageTransforms(object):
         self.lr_img_type = lr_img_type
         self.hr_img_type = hr_img_type
 
-        assert self.split in {'train', 'test'}
-
     def __call__(self, img):
-        if self.split == 'train':
-            # Random crop for training images
-            left = random.randint(0, img.width - self.crop_size)
-            top = random.randint(0, img.height - self.crop_size)
-            hr_img = img.crop((left, top, left + self.crop_size, top + self.crop_size))
-        else:
-            # Center crop for testing images
-            left = (img.width % self.scaling_factor) // 2
-            top = (img.height % self.scaling_factor) // 2
-            hr_img = img.crop((left, top, img.width - left, img.height - top))
+        crop_fn = random_crop if self.split == 'train' else center_crop
+        hr_img = crop_fn(img, self.crop_size, self.scaling_factor)
+        lr_img = resize_image(hr_img, self.scaling_factor, method=Image.BICUBIC)
+        hr_img = resize_image(lr_img, self.scaling_factor, scale_up=True, method=Image.BICUBIC)
+        return convert_image(lr_img, 'pil', self.lr_img_type), convert_image(hr_img, 'pil', self.hr_img_type)
 
-        # Downscale and upscale to simulate low-resolution creation
-        lr_img = hr_img.resize((hr_img.width // self.scaling_factor, hr_img.height // self.scaling_factor),
-                               Image.BICUBIC)
-        hr_img = hr_img.resize((lr_img.width * self.scaling_factor, lr_img.height * self.scaling_factor), Image.BICUBIC)
+def random_crop(img, crop_size, scaling_factor):
+    left = random.randint(0, img.width - crop_size)
+    top = random.randint(0, img.height - crop_size)
+    return img.crop((left, top, left + crop_size, top + crop_size))
 
-        # Convert images to desired formats
-        lr_img = convert_image(lr_img, source='pil', target=self.lr_img_type)
-        hr_img = convert_image(hr_img, source='pil', target=self.hr_img_type)
+def center_crop(img, crop_size, scaling_factor):
+    left = (img.width % scaling_factor) // 2
+    top = (img.height % scaling_factor) // 2
+    right = left + (img.width - left * 2)
+    bottom = top + (img.height - top * 2)
+    return img.crop((left, top, right, bottom))
 
-        return lr_img, hr_img
+def resize_image(img, scaling_factor, scale_up=False, method=Image.BICUBIC):
+    if scale_up:
+        return img.resize((img.width * scaling_factor, img.height * scaling_factor), method)
+    return img.resize((img.width // scaling_factor, img.height // scaling_factor), method)
 
-
-class AverageMeter(object):
+class AverageMeter:
     def __init__(self):
         self.reset()
 
@@ -88,20 +83,17 @@ class AverageMeter(object):
         self.count += n
         self.avg = self.sum / self.count
 
-
 def clip_gradient(optimizer, grad_clip):
     for group in optimizer.param_groups:
         for param in group['params']:
             if param.grad is not None:
                 param.grad.data.clamp_(-grad_clip, grad_clip)
 
-
 def save_checkpoint(state, filename):
     torch.save(state, filename)
-
 
 def adjust_learning_rate(optimizer, shrink_factor):
     print("\nDECAYING learning rate.")
     for param_group in optimizer.param_groups:
-        param_group['lr'] = param_group['lr'] * shrink_factor
+        param_group['lr'] *= shrink_factor
     print("The new learning rate is %f\n" % (optimizer.param_groups[0]['lr'],))
