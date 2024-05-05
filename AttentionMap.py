@@ -5,7 +5,7 @@ import numpy as np
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-srresnet_checkpoint = "D:/A_Refp/SrresnetCheckpoint(cropsize96batch16prelu)/checkpoint_epoch_43_srresnet.pth.tar"
+srresnet_checkpoint = "SrresnetCheckpoint(cropsize96batch16prelu)/checkpoint_epoch_43_srresnet.pth.tar"
 checkpoint = torch.load(srresnet_checkpoint, map_location=device)
 srresnet = checkpoint['model'].to(device)
 srresnet.eval()
@@ -51,4 +51,4 @@ def visualize_attention(img, halve=False):
     plt.show()
 
 if __name__ == '__main__':
-    visualize_attention("D:/A_Refp/img/samurai.png")
+    visualize_attention("D:/A_Refp/img/butterfly.png")

@@ -14,7 +14,7 @@ data_folder = "./"
 test_data_names = ["Set5", "Set14", "BSDS100"]
 
 # Directory where the checkpoints are stored
-checkpoint_dir = "D:/A_Refp/SrresnetCheckpoint3"
+checkpoint_dir = "D:/Final Project Srresnet/SrresnetCheckpoint3"
 
 # Prepare to save the results
 results_file = "crop64batch8mishALL.txt"
